@@ -1,23 +1,31 @@
+import { previousCropOptions } from "../data/options";
+
 function InputBox({ formState, districts, onFieldChange }) {
   return (
     <div className="workspace-grid">
       <section className="hero-card">
-        <span className="eyebrow">AgriMind AI</span>
-        <h1>How can I help you today?</h1>
+        <span className="eyebrow">AgriMind AI — Smart Crop Advisor</span>
+        <h1>Grow smarter, harvest better</h1>
         <p>
-          Share your farm conditions and AgriMind AI will estimate success rate,
-          profit, resource needs, risk, and the first 30 days of action.
+          Enter your farm details below. AgriMind AI will analyse real-time
+          weather conditions and calculate the best crops for your specific
+          location, budget, and resources.
         </p>
       </section>
 
-      <section className="form-card">
+      {/* Location Section */}
+      <section className="form-card" id="section-location">
         <div className="section-header">
-          <span>1. Farm Location</span>
+          <span>📍 1. Farm Location</span>
         </div>
         <div className="field-grid">
           <label>
             <span>State</span>
-            <select value={formState.state} onChange={(event) => onFieldChange("state", event.target.value)}>
+            <select
+              id="input-state"
+              value={formState.state}
+              onChange={(e) => onFieldChange("state", e.target.value)}
+            >
               <option value="">Select state</option>
               {Object.keys(districts).map((state) => (
                 <option key={state} value={state}>
@@ -28,7 +36,12 @@ function InputBox({ formState, districts, onFieldChange }) {
           </label>
           <label>
             <span>District</span>
-            <select value={formState.district} onChange={(event) => onFieldChange("district", event.target.value)} disabled={!formState.state}>
+            <select
+              id="input-district"
+              value={formState.district}
+              onChange={(e) => onFieldChange("district", e.target.value)}
+              disabled={!formState.state}
+            >
               <option value="">Select district</option>
               {(districts[formState.state] || []).map((district) => (
                 <option key={district} value={district}>
@@ -40,77 +53,77 @@ function InputBox({ formState, districts, onFieldChange }) {
         </div>
       </section>
 
-      <section className="form-card">
+      {/* Land & Budget Section */}
+      <section className="form-card" id="section-farm">
         <div className="section-header">
-          <span>2. Land & Resources</span>
-        </div>
-        <div className="slider-group">
-          <div className="slider-copy">
-            <span>Land size</span>
-            <strong>{formState.landSize} acres</strong>
-          </div>
-          <input type="range" min="1" max="50" value={formState.landSize} onChange={(event) => onFieldChange("landSize", Number(event.target.value))} />
-        </div>
-        <div className="toggle-row">
-          <div>
-            <span>Irrigation available</span>
-            <small>{formState.irrigation ? "Yes" : "No"}</small>
-          </div>
-          <button type="button" className={`toggle ${formState.irrigation ? "active" : ""}`} onClick={() => onFieldChange("irrigation", !formState.irrigation)}>
-            <span />
-          </button>
-        </div>
-        <label>
-          <span>Water source</span>
-          <select value={formState.waterSource} onChange={(event) => onFieldChange("waterSource", event.target.value)}>
-            <option value="">Select source</option>
-            <option value="canal">Canal</option>
-            <option value="borewell">Borewell</option>
-            <option value="drip">Drip</option>
-            <option value="rainfed">Rainfed</option>
-          </select>
-        </label>
-      </section>
-
-      <section className="form-card">
-        <div className="section-header">
-          <span>3. Budget & Labour</span>
+          <span>🌾 2. Land & Budget</span>
         </div>
         <div className="field-grid">
           <label>
-            <span>Budget range</span>
-            <select value={formState.budget} onChange={(event) => onFieldChange("budget", event.target.value)}>
+            <span>Land Area (acres)</span>
+            <input
+              id="input-land-area"
+              type="number"
+              min="1"
+              max="500"
+              value={formState.landArea}
+              onChange={(e) =>
+                onFieldChange("landArea", Number(e.target.value) || 1)
+              }
+              placeholder="e.g. 5"
+            />
+          </label>
+          <label>
+            <span>Budget (₹)</span>
+            <input
+              id="input-budget"
+              type="number"
+              min="1000"
+              step="1000"
+              value={formState.budget}
+              onChange={(e) =>
+                onFieldChange("budget", Number(e.target.value) || 10000)
+              }
+              placeholder="e.g. 50000"
+            />
+          </label>
+        </div>
+      </section>
+
+      {/* Labour & Crop History */}
+      <section className="form-card" id="section-labour">
+        <div className="section-header">
+          <span>👨‍🌾 3. Labour & History</span>
+        </div>
+        <div className="field-grid">
+          <label>
+            <span>Labour Availability</span>
+            <select
+              id="input-labour"
+              value={formState.labour}
+              onChange={(e) => onFieldChange("labour", e.target.value)}
+            >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
             </select>
           </label>
           <label>
-            <span>Labour available</span>
-            <select value={formState.labour} onChange={(event) => onFieldChange("labour", event.target.value)}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
+            <span>Previous Crop</span>
+            <select
+              id="input-previous-crop"
+              value={formState.previousCrop}
+              onChange={(e) => onFieldChange("previousCrop", e.target.value)}
+            >
+              <option value="">None / Skip</option>
+              {previousCropOptions.map((crop) => (
+                <option key={crop} value={crop}>
+                  {crop}
+                </option>
+              ))}
             </select>
           </label>
         </div>
-      </section>
-
-      <section className="form-card">
-        <div className="section-header">
-          <span>4. Crop History</span>
-        </div>
-        <label>
-          <span>Previous crop</span>
-          <select value={formState.previousCrop} onChange={(event) => onFieldChange("previousCrop", event.target.value)}>
-            <option value="">Skip for now</option>
-            {["Rice", "Maize", "Cotton", "Soybean", "Wheat", "Pulses", "Groundnut", "Vegetables", "Black Gram", "Green Gram", "Chilli"].map((crop) => (
-              <option key={crop} value={crop}>
-                {crop}
-              </option>
-            ))}
-          </select>
-        </label>
       </section>
     </div>
   );
