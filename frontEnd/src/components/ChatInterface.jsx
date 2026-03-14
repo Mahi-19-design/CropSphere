@@ -1,41 +1,70 @@
-import { Bot, ChevronRight, LoaderCircle, Sprout } from "lucide-react";
-import InputBox from "./inputBox";
+import { Bot, LoaderCircle, Sprout } from "lucide-react";
+import InputBox from "./InputBox";
 import RecommendationCards from "./RecommendationCards";
 
 function ChatInterface({
-  sessions,
-  activeSessionId,
-  onSelectSession,
   formState,
   districts,
   onFieldChange,
   onSubmit,
   loading,
   errorMessage,
-  activeRecommendations,
+  result,
 }) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <span className="eyebrow">Farm Plans</span>
-          <h2>Previous sessions</h2>
+          <div className="sidebar-logo">
+            <Sprout size={28} />
+          </div>
+          <h2>AgriMind AI</h2>
+          <p className="sidebar-tagline">
+            Intelligent Crop Decision Engine
+          </p>
         </div>
-        <div className="session-list">
-          {sessions.map((session) => (
-            <button
-              type="button"
-              key={session.id}
-              className={`session-card ${activeSessionId === session.id ? "active" : ""}`}
-              onClick={() => onSelectSession(session.id)}
-            >
-              <div>
-                <strong>{session.title}</strong>
-                <p>{session.subtitle}</p>
-              </div>
-              <ChevronRight size={16} />
-            </button>
-          ))}
+
+        <div className="sidebar-features">
+          <div className="feature-item">
+            <span className="feature-icon">🌤️</span>
+            <div>
+              <strong>Live Weather</strong>
+              <p>Real-time data from Open-Meteo API</p>
+            </div>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">🧮</span>
+            <div>
+              <strong>Smart Scoring</strong>
+              <p>6-factor weighted algorithm</p>
+            </div>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">🌾</span>
+            <div>
+              <strong>25 Crop Database</strong>
+              <p>Comprehensive crop profiles</p>
+            </div>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">📊</span>
+            <div>
+              <strong>Cost & Yield</strong>
+              <p>Budget-aware recommendations</p>
+            </div>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">🔄</span>
+            <div>
+              <strong>Crop Rotation</strong>
+              <p>Smart rotation compatibility</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="sidebar-footer">
+          <p>Built for Indian Farmers</p>
+          <small>Powered by Open-Meteo Weather API</small>
         </div>
       </aside>
 
@@ -47,12 +76,22 @@ function ChatInterface({
             </div>
             <div>
               <strong>AgriMind AI</strong>
-              <p>Guided crop decisions for the next planting cycle</p>
+              <p>Precision crop recommendations powered by live weather</p>
             </div>
           </div>
-          <button type="button" className="primary-action" onClick={onSubmit} disabled={loading}>
-            {loading ? <LoaderCircle size={16} className="spin" /> : <Bot size={16} />}
-            <span>{loading ? "Analyzing..." : "Recommend crops"}</span>
+          <button
+            type="button"
+            className="primary-action"
+            id="btn-recommend"
+            onClick={onSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <LoaderCircle size={16} className="spin" />
+            ) : (
+              <Bot size={16} />
+            )}
+            <span>{loading ? "Analyzing weather & crops..." : "Analyze & Recommend"}</span>
           </button>
         </div>
 
@@ -62,9 +101,11 @@ function ChatInterface({
           onFieldChange={onFieldChange}
         />
 
-        {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+        {errorMessage ? (
+          <div className="error-banner" id="error-message">{errorMessage}</div>
+        ) : null}
 
-        <RecommendationCards recommendations={activeRecommendations} />
+        <RecommendationCards result={result} />
       </main>
     </div>
   );

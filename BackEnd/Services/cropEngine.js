@@ -1,154 +1,72 @@
 const crops = require("../data/crops.json");
 const regions = require("../data/regions.json");
-const {
-  calculateSuitability,
-  calculateProfitability,
-  getRiskSummary,
-  normalizeLevel,
-} = require("../utils/scoring");
+const { getWeatherForDistrict } = require("./weatherService");
+const { calculateCropScore } = require("../utils/scoring");
 
 function getRegionOptions() {
   return regions;
 }
 
-function buildActionPlan(crop, input) {
-  const landSize = Number(input.landSize) || 1;
-  const irrigationMode = input.irrigation ? `Use ${input.waterSource || "available"} irrigation for uniform moisture.` : "Depend on rainfall timing and reserve one backup irrigation if possible.";
-
-  return crop.actionTemplate.map((step, index) => ({
-    dayRange: `Day ${index * 7 + 1}-${index * 7 + 7}`,
-    task: `${step}. ${index === 1 ? irrigationMode : `Cover ${landSize} acre(s) in this phase.`}`,
-  }));
-}
-
-function buildCards(crop, input, successRate) {
-  const profitability = calculateProfitability(crop, input.landSize);
-  const risk = getRiskSummary(crop);
-  const estimatedWater = normalizeLevel(crop.waterRequirement) === "high" ? "High water demand" : normalizeLevel(crop.waterRequirement) === "medium" ? "Moderate water demand" : "Low water demand";
-  const reasons = [
-    `${crop.name} fits ${input.state}, ${input.district}`,
-    `${crop.budgetRequirement} budget profile`,
-    `${crop.labourRequirement} labour demand`,
-    crop.irrigationRequired ? "benefits from irrigation support" : "works with limited irrigation",
-  ];
-
-  return [
-    {
-      id: "top-recommendation",
-      title: "Top crop recommendation",
-      type: "recommendation",
-        content: {
-          crop: crop.name,
-          successRate,
-          district: crop.district,
-          season: crop.season,
-          reason: reasons.join(", "),
-        },
-      },
-    {
-      id: "profitability",
-      title: "Profitability estimate",
-      type: "profitability",
-      content: profitability,
-    },
-    {
-      id: "resources",
-      title: "Resource requirements",
-      type: "resources",
-      content: {
-        water: estimatedWater,
-        irrigation: crop.irrigationRequired ? "Irrigation recommended" : "Can work in low-irrigation conditions",
-        labour: `${crop.labourRequirement} labour intensity`,
-        budget: `${crop.budgetRequirement} input budget`,
-        inputs: crop.resources,
-      },
-    },
-    {
-      id: "weather-window",
-      title: "Weather and planting window",
-      type: "weather",
-      content: {
-        plantingWindow: crop.weatherWindow,
-        cropDuration: `${crop.growingDays} days`,
-      },
-    },
-    {
-      id: "risk-level",
-      title: "Risk level",
-      type: "risk",
-      content: risk,
-    },
-    {
-      id: "action-plan",
-      title: "30-day farming action plan",
-      type: "action-plan",
-      content: buildActionPlan(crop, input),
-    },
-  ];
-}
-
-function recommendCrops(input) {
+/**
+ * Main recommendation engine.
+ * 1. Receive farmer inputs
+ * 2. Fetch weather data from Open-Meteo
+ * 3. Load crop dataset
+ * 4. Score each crop using the scoring rules
+ * 5. Sort crops by score
+ * 6. Return the top 3 crops
+ */
+async function recommendCrops(input) {
   if (!input.state || !input.district) {
     throw new Error("State and district are required.");
   }
 
-  const regionalMatches = crops.filter(
-    (crop) =>
-      crop.state === input.state &&
-      crop.district === input.district
-  );
+  // Step 1: Fetch real weather data
+  let weather;
+  try {
+    weather = await getWeatherForDistrict(input.state, input.district);
+  } catch (err) {
+    console.error("Weather API error:", err.message);
+    // Fallback to neutral weather if API fails
+    weather = {
+      temperature: 28,
+      precipitation: 2,
+      humidity: 60,
+      windSpeed: null,
+      weatherCode: null,
+      location: { state: input.state, district: input.district },
+    };
+  }
 
-  const stateMatches = crops.filter((crop) => crop.state === input.state);
-  const fallbackMatches = crops.filter((crop) => crop.state !== input.state);
+  // Step 2: Score every crop in the dataset
+  const scoredCrops = crops.map((crop) => calculateCropScore(input, crop, weather));
 
-  const recommendationPool = [...regionalMatches];
+  // Step 3: Sort by suitability score (descending)
+  scoredCrops.sort((a, b) => b.suitability_score - a.suitability_score);
 
-  stateMatches.forEach((crop) => {
-    if (!recommendationPool.find((item) => item.id === crop.id)) {
-      recommendationPool.push(crop);
-    }
-  });
-
-  fallbackMatches.forEach((crop) => {
-    if (!recommendationPool.find((item) => item.id === crop.id)) {
-      recommendationPool.push(crop);
-    }
-  });
-
-  const ranked = recommendationPool
-    .map((crop) => {
-      const successRate = calculateSuitability(input, crop);
-
-      return {
-        cropId: crop.id,
-        cropName: crop.name,
-        successRate,
-        summary: {
-          state: crop.state,
-          district: crop.district,
-          season: crop.season,
-          waterRequirement: crop.waterRequirement,
-          budgetRequirement: crop.budgetRequirement,
-          labourRequirement: crop.labourRequirement,
-        },
-        cards: buildCards(crop, input, successRate),
-      };
-    })
-    .sort((first, second) => second.successRate - first.successRate)
-    .slice(0, 3);
+  // Step 4: Return the top 3
+  const topCrops = scoredCrops.slice(0, 3);
 
   return {
-    farmerProfile: {
+    farmer_profile: {
       state: input.state,
       district: input.district,
-      landSize: input.landSize,
-      irrigation: input.irrigation,
-      waterSource: input.waterSource,
+      land_area: input.landArea,
       budget: input.budget,
       labour: input.labour,
-      previousCrop: input.previousCrop || null,
+      previous_crop: input.previousCrop || null,
     },
-    topRecommendations: ranked,
+    weather_data: {
+      temperature: weather.temperature,
+      precipitation: weather.precipitation,
+      humidity: weather.humidity,
+      location: weather.location,
+    },
+    top_crops: topCrops,
+    all_scores: scoredCrops.map((c) => ({
+      crop: c.crop,
+      score: c.suitability_score,
+    })),
   };
 }
 
