@@ -73,7 +73,7 @@ CropSphere/
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/cropsphere.git
+git clone https://github.com/Mahi-19-design/cropsphere.git
 cd cropsphere
 ```
 
